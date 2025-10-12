@@ -17,21 +17,23 @@ extension IPv6Address {
         }
 
         if let ipv6Address = domainName._data.withUnsafeReadableBytes({ ptr -> IPv6Address? in
-            /// `DomainName.data` always only contains ASCII bytes
-            let asciiSpan = ptr.bindMemory(to: UInt8.self).span
+            ptr.withMemoryRebound(to: UInt8.self) { ptr in
+                /// `DomainName.data` always only contains ASCII bytes
+                let asciiSpan = ptr.span
 
-            if iterator.reachedEnd() {
-                return IPv6Address(
-                    _uncheckedAssumingValidASCII: asciiSpan.extracting(unchecked: range)
-                )
-            } else {
-                /// Maybe it's an ipv4-mapped ipv6 address
-                /// like `::FFFF:1.1.1.1`
-                return IPv6Address.ipv4Mapped(
-                    asciiSpan: asciiSpan,
-                    iterator: &iterator,
-                    firstRange: range
-                )
+                if iterator.reachedEnd() {
+                    return IPv6Address(
+                        _uncheckedAssumingValidASCII: asciiSpan.extracting(unchecked: range)
+                    )
+                } else {
+                    /// Maybe it's an ipv4-mapped ipv6 address
+                    /// like `::FFFF:1.1.1.1`
+                    return IPv6Address.ipv4Mapped(
+                        asciiSpan: asciiSpan,
+                        iterator: &iterator,
+                        firstRange: range
+                    )
+                }
             }
         }) {
             self = ipv6Address

@@ -81,8 +81,10 @@ extension DomainName {
         let startWriterIndex = buffer.writerIndex
 
         buffer = ipv6.makeDescription { (maxWriteableBytes, callback) in
-            buffer.writeWithUnsafeMutableBytes(minimumWritableBytes: maxWriteableBytes) { ptr in
-                callback(ptr.bindMemory(to: UInt8.self))
+            buffer.writeWithUnsafeMutableBytes(minimumWritableBytes: maxWriteableBytes) {
+                $0.withMemoryRebound(to: UInt8.self) {
+                    callback($0)
+                }
             }
             return buffer
         }
