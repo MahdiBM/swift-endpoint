@@ -37,7 +37,7 @@ The package contains a great amount of unit tests as well as benchmarks to ensur
 
 swift-endpoint provides highly optimized implementations for converting its types to and from an String.
 
-You can either initialize each type using an String, or initialize the exact underlying type they contain.
+You can either initialize each type using a `String`, or initialize the exact underlying type they contain.
 
 Here are some examples:
 
@@ -110,41 +110,40 @@ print(anyIPAddress) /// prints "255.255.255.255"
 
 ## Performance
 
-To see up to date information about performance of this package, please go to this [benchmarks list](https://github.com/swift-dns/swift-endpoint/actions/workflows/benchmarks.yml?query=branch%3Amain), and choose the most recent benchmark. You'll see a summary of the benchmark there.
-
 In [this post](https://forums.swift.org/t/pitch-standard-network-address-types/82288/11) on the Swift forums I was asked to compare IP parsing implementations with the native C libraries which provide functions such as `inet_ntop` and `inet_pton` which are commonly used by everyone, including swift-nio.
 
 Here's the result at that point in time. Note that I made a lot of effort to make sure the C related functions are performing at their best.
 
-All benchmarks on all platforms commit similar allocations.
-3 of the benchmarks always do `0`, `IPv6_String_Encoding_Mixed` always does `1`.
+In 7 out of the 8 benchmarks this library performs better than the C libraries.   
+In the "IPv6 string decoding" benchmark it performs only 30% worse than Glibc, at ~23 millions rounds per second.
 
-In all benchmarks apart from 1, this library performs better than the C libraries.
-On the "IPv6 string decoding" benchmark it performs only 30% worse than Glibc, at ~23 millions rounds per second.
-
-The results are all reproducible by simply running `scripts/benchmark.bash` on a machine of your own.
-
-### Against Darwin
+#### Against Darwin
 
 These were performed on my M1 Pro MacBook, on macOS 26.0.
 
-| Benchmark Name                                         | Rounds      | Swift | inet_pton/ntop |
-| ------------------------------------------------------ | ----------- | ----- | -------------- |
-| IPv4_String_Encoding_Mixed                             | 15 Millions | 153ms | 3036ms         |
-| IPv4_String_Decoding_Local_Broadcast                   | 10 Millions | 251ms | 468ms          |
-| IPv6_String_Encoding_Mixed                             | 4 Millions  | 281ms | 1473ms         |
-| IPv6_String_Decoding_2_Groups_Compressed_In_The_Middle | 3 Millions  | 180ms | 360ms          |
+| Benchmark Name                              | Rounds      | Swift | inet_pton/ntop | Speedup |
+| ------------------------------------------- | ----------- | ----- | -------------- | ------- |
+| IPv4_String_Encoding_Mixed                  | 15 Millions | 153ms | 3036ms         | 19.84x  |
+| IPv4_String_Decoding_Local_Broadcast        | 10 Millions | 251ms | 468ms          | 1.86x   |
+| IPv6_String_Encoding_Mixed                  | 4 Millions  | 281ms | 1473ms         | 5.24x   |
+| IPv6_String_Decoding_2_Groups_Compressed... | 3 Millions  | 180ms | 360ms          | 2x      |
 
-### Against Glibc
+#### Against Glibc
 
 These were performed on a dedicated-cpu-core machine from Hetzner in the Falkenstein region.
 
-> Host 'eba52b5e61ab' with 2 'x86_64' processors with 7 GB memory, running:
-> #85-Ubuntu SMP PREEMPT_DYNAMIC Thu Sep 18 15:26:59 UTC 2025
+> Host with 2 'x86_64' processors with 7 GB memory, running: #85-Ubuntu SMP PREEMPT_DYNAMIC
 
-| Benchmark Name                                         | Rounds      | Swift | inet_pton/ntop |
-| ------------------------------------------------------ | ----------- | ----- | -------------- |
-| IPv4_String_Encoding_Mixed                             | 15 Millions | 190ms | 1570ms         |
-| IPv4_String_Decoding_Local_Broadcast                   | 10 Millions | 180ms | 240ms          |
-| IPv6_String_Encoding_Mixed                             | 4 Millions  | 200ms | 1830ms         |
-| IPv6_String_Decoding_2_Groups_Compressed_In_The_Middle | 3 Millions  | 130ms | 100ms          |
+| Benchmark Name                              | Rounds      | Swift | inet_pton/ntop | Speedup |
+| ------------------------------------------- | ----------- | ----- | -------------- | ------- |
+| IPv4_String_Encoding_Mixed                  | 15 Millions | 190ms | 1570ms         | 8.26x   |
+| IPv4_String_Decoding_Local_Broadcast        | 10 Millions | 180ms | 240ms          | 1.33x   |
+| IPv6_String_Encoding_Mixed                  | 4 Millions  | 200ms | 1830ms         | 9.15x   |
+| IPv6_String_Decoding_2_Groups_Compressed... | 3 Millions  | 130ms | 100ms          | 0.77x  |
+
+#### Notes
+
+* To see up to date information about performance of this package, please go to this [benchmarks list](https://github.com/swift-dns/swift-endpoint/actions/workflows/benchmarks.yml?query=branch%3Amain), and choose the most recent benchmark. You'll see a summary of the benchmark there.
+* The results above are all reproducible by simply running `scripts/benchmark.bash` on a machine of your own.
+* All benchmarks on all platforms commit similar allocations.   
+* 3 of the benchmarks always do `0`, `IPv6_String_Encoding_Mixed` always does `1`.
