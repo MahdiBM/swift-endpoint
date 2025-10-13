@@ -2,7 +2,7 @@ public import SwiftIDNA
 
 public import struct NIOCore.ByteBuffer
 
-/// A domain name.
+/// A domain name. A sequence of labels.
 ///
 /// [RFC 9499, DNS Terminology, March 2024](https://tools.ietf.org/html/rfc9499)
 ///
@@ -12,6 +12,13 @@ public import struct NIOCore.ByteBuffer
 /// Any path of a directed acyclic graph can be represented by a domain name consisting of the labels of its nodes,
 /// ordered by decreasing distance from the root(s) (whiscalaris the normal convention within the DNS).
 /// ```
+///
+/// Use a for-loop to iterate over the labels of the domain name.
+///
+/// Only lowercased letter, digits, hyphen-minus, underscores, stars, and whitespaces are allowed in this implementation.
+/// Underscores are allowed for service names like "_sip._tcp.example.com".
+/// Stars are allowed for wildcards like "*.example.com".
+/// Whitespaces are allowed for labels like "Mijia Cloud" which some Xiaomi devices use.
 public struct DomainName: Sendable {
     /// Maximum allowed domain name length.
     public static var maxLength: UInt8 {
@@ -45,10 +52,15 @@ public struct DomainName: Sendable {
     /// The raw data of the domain name, as in the wire format, excluding the root label (trailing null byte).
     /// Lowercased ASCII bytes only.
     ///
-    /// Non-ASCII names are converted to ASCII based on the IDNA spec, in the initializers, and
-    /// will never make it to the stored this property.
+    /// Only lowercased letter, digits, hyphen-minus, underscores, stars, and whitespaces will ever make it to this property.
+    ///
+    /// Underscores are allowed for service names like "_sip._tcp.example.com".
+    /// Whitespaces are allowed for labels like "Mijia Cloud" which some Xiaomi devices use.
+    /// Stars are allowed for wildcards like "*.example.com".
+    /// Non-ASCII names are converted to ASCII based on the IDNA spec, in the initializers.
     /// Non-lowercased ASCII names are converted to lowercased ASCII in the initializers.
-    /// Based on the DNS specs, all names are case-insensitive, and the bytes must be valid ASCII.
+    ///
+    /// Based on the DNS specs, all names are case-insensitive.
     /// This package goes further and normalizes every domainName to lowercase to avoid inconsistencies.
     ///
     /// [RFC 9499, DNS Terminology, March 2024](https://tools.ietf.org/html/rfc9499)
@@ -113,7 +125,7 @@ public struct DomainName: Sendable {
     @inlinable
     public init(
         isFQDN: Bool = false,
-        uncheckedData data: ByteBuffer = ByteBuffer()
+        _uncheckedAssumingValidWireFormatBytes data: ByteBuffer = ByteBuffer()
     ) {
         self.isFQDN = isFQDN
         self._data = data
@@ -121,7 +133,9 @@ public struct DomainName: Sendable {
         /// Make sure the domainName is valid
         /// No empty labels
         assert(self._data.readableBytes <= Self.maxLength)
-        assert(self.allSatisfy({ !($0.readableBytes == 0) }))
+        assert(
+            self.allSatisfy({ !($0.readableBytes == 0 || $0.readableBytes > Self.maxLabelLength) })
+        )
         assert(self._data.readableBytesView.allSatisfy(\.isASCII))
         assert(self.allSatisfy { $0.readableBytesView.allSatisfy { !$0.isUppercasedASCIILetter } })
     }
@@ -147,8 +161,10 @@ extension DomainName: Hashable {
 }
 
 extension DomainName: Sequence {
-    public struct PositionIterator: Sendable, IteratorProtocol {
-        public typealias Element = (startIndex: Int, length: Int)
+    @usableFromInline
+    package struct PositionIterator: Sendable, IteratorProtocol {
+        @usableFromInline
+        package typealias Element = (startIndex: Int, length: Int)
 
         /// TODO: will using Span help here? might skip some bounds checks or ref-count checks of ByteBuffer?
         @usableFromInline
@@ -163,12 +179,12 @@ extension DomainName: Sequence {
         }
 
         @inlinable
-        public func reachedEnd() -> Bool {
+        package func reachedEnd() -> Bool {
             self.startIndex == self.domainName._data.writerIndex
         }
 
         @inlinable
-        public mutating func next() -> (startIndex: Int, length: Int)? {
+        package mutating func next() -> (startIndex: Int, length: Int)? {
             if self.reachedEnd() {
                 return nil
             }
@@ -197,7 +213,7 @@ extension DomainName: Sequence {
         }
 
         @inlinable
-        public mutating func nextRange() -> (range: Range<Int>, length: Int)? {
+        package mutating func nextRange() -> (range: Range<Int>, length: Int)? {
             guard let (startIndex, length) = self.next() else {
                 return nil
             }
@@ -241,7 +257,7 @@ extension DomainName: Sequence {
     }
 
     @inlinable
-    public func makePositionIterator() -> Self.PositionIterator {
+    package func makePositionIterator() -> Self.PositionIterator {
         PositionIterator(base: self)
     }
 }

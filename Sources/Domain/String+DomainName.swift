@@ -110,6 +110,7 @@ extension DomainName {
     public enum ValidationError: Error {
         case domainNameMustBeASCII(ByteBuffer)
         case domainNameLengthLimitExceeded(actual: Int, max: Int, in: ByteBuffer)
+        case labelContainsInvalidASCIIByte(UInt8, in: ByteBuffer)
         case labelLengthLimitExceeded(actual: Int, max: Int, in: ByteBuffer)
         case labelMustNotBeEmpty(in: ByteBuffer)
         case emptyDomainName
@@ -217,22 +218,23 @@ extension DomainName {
             isFQDN: &isFQDN
         )
 
-        /// TODO: make sure all initializations of DomainName go through a single initializer that
-        /// asserts lowercased ASCII?
+        var idnaConfiguration = idnaConfiguration
+        /// We validate the length ourselves. No need for the IDNA implementation to do it as well.
+        idnaConfiguration.verifyDNSLength = false
 
-        /// short-circuits most domain names which won't change with IDNA anyway.
+        /// This short-circuits most domain names which won't change with IDNA anyway.
         let idnaConversionResult = try IDNA(configuration: idnaConfiguration)
             .toASCII(_uncheckedAssumingValidUTF8: span)
 
         self = try idnaConversionResult.withSpan { span in
             try DomainName(
-                __uncheckedValidatedDomainNameSpan: span,
-                isFQDN: isFQDN
+                isFQDN: isFQDN,
+                asciiLowercasedNoRootLabelTextualRepresentationSpan: span
             )
         } ifNotAvailable: {
             try DomainName(
-                __uncheckedValidatedDomainNameSpan: span,
-                isFQDN: isFQDN
+                isFQDN: isFQDN,
+                asciiLowercasedNoRootLabelTextualRepresentationSpan: span
             )
         }
     }
@@ -297,8 +299,8 @@ extension DomainName {
     /// Total length greater than 255 bytes will throw an error.
     @inlinable
     init(
-        __uncheckedValidatedDomainNameSpan span: Span<UInt8>,
-        isFQDN: Bool
+        isFQDN: Bool,
+        asciiLowercasedNoRootLabelTextualRepresentationSpan span: Span<UInt8>
     ) throws {
         debugOnly {
             DomainName.__debugAssertValidDomainNameSpan(span)
@@ -358,6 +360,24 @@ extension DomainName {
     ) throws {
         let range = Range(uncheckedBounds: (startIndex, idx))
         let chunk = span.extracting(range)
+
+        /// At this point we know the bytes are ASCII and lowercased.
+        /// Let's check to make sure they're only letter-hyphen-digit.
+        /// We tolerate underscores for domain names like "_sip._tcp.example.com" which are service names.
+        /// We tolerate stars for domain names like "*.example.com" which are wildcards.
+        /// We tolerate whitespaces for labels like "Mijia Cloud" which Xiaomi devices use.
+        for idx in chunk.indices {
+            let byte = chunk[unchecked: idx]
+            assert(!byte.isUppercasedASCIILetter)
+
+            if !byte.isLowercasedLetterOrDigitOrHyphenOrUnderscoreOrStarOrWhitespace {
+                throw ValidationError.labelContainsInvalidASCIIByte(
+                    byte,
+                    in: ByteBuffer(swiftEndpointReadingFromSpan: chunk)
+                )
+            }
+        }
+
         var labelLength = range.count
         if labelLength == 0 {
             throw ValidationError.labelMustNotBeEmpty(
@@ -374,8 +394,8 @@ extension DomainName {
 
         withUnsafeBytes(of: &labelLength) {
             dataPtr.copyMemory(
-                from: UnsafeRawPointer($0.baseAddress.unsafelyUnwrapped),
-                /// Label length is 1 byte (even less, 63 max)
+                from: $0.baseAddress.unsafelyUnwrapped,
+                /// Label length is 1 byte (even less than 255, 63 max)
                 byteCount: 1
             )
             dataPtr = dataPtr.advanced(by: 1)
@@ -383,7 +403,7 @@ extension DomainName {
 
         chunk.withUnsafeBytes { chunkPtr in
             dataPtr.copyMemory(
-                from: UnsafeRawPointer(chunkPtr.baseAddress.unsafelyUnwrapped),
+                from: chunkPtr.baseAddress.unsafelyUnwrapped,
                 byteCount: chunk.count
             )
             dataPtr = dataPtr.advanced(by: chunk.count)

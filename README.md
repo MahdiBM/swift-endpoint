@@ -53,10 +53,6 @@ let domainName2 = try DomainName("新华网.中国")
 print(domainName2) /// prints "新华网.中国"
 print(domainName2.debugDescription) /// prints "xn--xkrr14bows.xn--fiqs8s"
 
-/// Define a domain name containing an ip address.
-let domainName3 = try DomainName("255.255.255.255")
-print(domainName3) /// prints "255.255.255.255"
-
 /// Define an ipv4 address. The type will parse the ip address into a UInt32 internally.
 let ipv4Address1 = IPv4Address("127.0.0.1")!
 let ipv4Address2 = IPv4Address(192, 168, 1, 1)!
@@ -77,6 +73,10 @@ let anyIPv4Address = AnyIPAddress("192.168.1.1")
 let anyIPv6Address = AnyIPAddress("[2001:DB8:85A3::100]")
 print(anyIPv4Address) /// prints "192.168.1.1"
 print(anyIPv6Address) /// prints "[2001:db8:85a3::100]"
+
+/// Define a domain name containing an ip v4 address.
+let domainName3 = try DomainName(ipv4: ipv4Address2)
+print(domainName3) /// prints "192.168.1.1"
 
 /// Define a CIDR. The type will store a `prefix` and a `mask`, representing this block of ips.
 let cidr1 = CIDR(prefix: ipv4Address1, prefixLength: 8) /// ipv4Address1 == "127.0.0.1"

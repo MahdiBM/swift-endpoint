@@ -265,44 +265,6 @@ struct IPAddressTests {
         }
     }
 
-    @available(swiftEndpointApplePlatforms 26, *)
-    @Test(
-        arguments: ipv6StringAndAddressTestCases
-            + ipv6IDNAStringAndAddressTestCases
-    )
-    func ipv6AddressFromStringThroughDomainName(
-        string: String,
-        expectedAddress: IPv6Address?,
-        isValidIPv4: Bool
-    ) {
-        let domainName = try? DomainName(string)
-
-        let ipv6Address = domainName.flatMap { IPv6Address(domainName: $0) }
-
-        if string == "::FFFF:204.152.189.116."
-            || string == "::FFFF:1."
-        {
-            /// Manually skip these specific cases for now
-            /// These are valid domain names, but invalid ipv6 addresses since they end in a dot
-            #expect(ipv6Address != nil)
-            return
-        }
-
-        #expect(ipv6Address == expectedAddress)
-
-        let ipAddress = domainName.flatMap { AnyIPAddress(domainName: $0) }
-        switch ipAddress {
-        case .v6(let ipv6):
-            #expect(ipv6 == expectedAddress)
-        case .none:
-            #expect(expectedAddress == nil)
-        case .v4:
-            if !isValidIPv4 {
-                Issue.record("Expected IPv6 but got: \(ipAddress)")
-            }
-        }
-    }
-
     @available(swiftEndpointApplePlatforms 15, *)
     @Test(
         arguments: [

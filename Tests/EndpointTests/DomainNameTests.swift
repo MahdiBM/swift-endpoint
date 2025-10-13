@@ -16,7 +16,6 @@ struct DomainNameTests {
             (domainName: "*.b.c", isFQDN: false, data: ByteBuffer([1, 42, 1, 98, 1, 99])),
             (domainName: "a.b.c", isFQDN: false, data: ByteBuffer([1, 97, 1, 98, 1, 99])),
             (domainName: "a.b.c.", isFQDN: true, data: ByteBuffer([1, 97, 1, 98, 1, 99])),
-            (domainName: #"test\."#, isFQDN: true, data: ByteBuffer([5, 116, 101, 115, 116, 92])),
             (
                 domainName: "Mijia Cloud",
                 isFQDN: false,
@@ -148,7 +147,6 @@ struct DomainNameTests {
             (domainName: "www.example", isFQDN: false),
             (domainName: "www", isFQDN: false),
             (domainName: "test.", isFQDN: true),
-            (domainName: #"test\."#, isFQDN: true),
         ]
     )
     func `fqdnParsing`(domainName: String, isFQDN: Bool) throws {
@@ -162,7 +160,6 @@ struct DomainNameTests {
             (domainName: "www.example", expected: "www.example"),
             (domainName: "www", expected: "www"),
             (domainName: "test.", expected: "test."),
-            (domainName: #"test\."#, expected: #"test\."#),
         ]
     )
     func `parsingThenAsStringWorksAsExpected`(domainName: String, expected: String) throws {
@@ -194,16 +191,13 @@ struct DomainNameTests {
         let name1 = DomainName(ipv4: ipAddress)
         let name2 = DomainName(ip: .v4(ipAddress))
         #expect(name1.description == "192.168.1.1")
-        #expect(name2.description == "192.168.1.1")
+        #expect(name2?.description == "192.168.1.1")
     }
 
     @available(swiftEndpointApplePlatforms 15, *)
     @Test func ipv6AddressToName() {
         let ipAddress: IPv6Address = 0x2a01_5cc0_0001_0002_0000_0000_0000_0004
-        let name1 = DomainName(ipv6: ipAddress)
-        let name2 = DomainName(ip: .v6(ipAddress))
-        #expect(name1.description == "[2a01:5cc0:1:2::4]")
-        #expect(name2.description == "[2a01:5cc0:1:2::4]")
+        #expect(DomainName(ip: .v6(ipAddress)) == nil)
     }
 
     /// The file pointing to `Resources.topDomains` contains only 200 top domains, but you can

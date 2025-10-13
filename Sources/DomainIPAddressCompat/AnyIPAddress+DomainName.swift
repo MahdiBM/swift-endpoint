@@ -5,102 +5,16 @@ import struct NIOCore.ByteBuffer
 
 @available(swiftEndpointApplePlatforms 15, *)
 extension DomainName {
-    public init(ip: AnyIPAddress) {
+    /// Initialize an `DomainName` from a `AnyIPAddress`.
+    /// The ip address must be a valid IPv4 address.
+    /// IPv6 addresses are incompatible with domain names and will return `nil`.
+    /// For example an ip address like `.v4(127.0.0.1)` will turn into the domain name `"127.0.0.1"`.
+    public init?(ip: AnyIPAddress) {
         switch ip {
         case .v4(let ipv4):
             self.init(ipv4: ipv4)
-        case .v6(let ipv6):
-            self.init(ipv6: ipv6)
+        case .v6:
+            return nil
         }
-    }
-
-    public init(ipv4: IPv4Address) {
-        var buffer = ByteBuffer()
-        /// 16 is the maximum number of bytes required to represent an IPv4 address here
-        buffer.reserveCapacity(16)
-
-        let lengthPrefixIndex = buffer.writerIndex
-        // Write a zero as a placeholder which will later be overwritten by the actual number of bytes written
-        buffer.writeInteger(.zero, as: UInt8.self)
-
-        let startWriterIndex = buffer.writerIndex
-
-        let bytes = ipv4.bytes
-
-        bytes.0.asDecimal(
-            writeUTF8Byte: {
-                buffer.writeInteger($0)
-            }
-        )
-        buffer.writeInteger(UInt8.asciiDot)
-
-        bytes.1.asDecimal(
-            writeUTF8Byte: {
-                buffer.writeInteger($0)
-            }
-        )
-        buffer.writeInteger(UInt8.asciiDot)
-
-        bytes.2.asDecimal(
-            writeUTF8Byte: {
-                buffer.writeInteger($0)
-            }
-        )
-        buffer.writeInteger(UInt8.asciiDot)
-
-        bytes.3.asDecimal(
-            writeUTF8Byte: {
-                buffer.writeInteger($0)
-            }
-        )
-
-        let endWriterIndex = buffer.writerIndex
-        let bytesWritten = endWriterIndex - startWriterIndex
-
-        /// This is safe to unwrap.
-        /// The implementation above cannot write more bytes than a UInt8 can represent.
-        let lengthPrefix = UInt8(exactly: bytesWritten).unsafelyUnwrapped
-
-        buffer.setInteger(
-            lengthPrefix,
-            at: lengthPrefixIndex,
-            as: UInt8.self
-        )
-
-        self.init(isFQDN: false, uncheckedData: buffer)
-    }
-
-    public init(ipv6: IPv6Address) {
-        var buffer = ByteBuffer()
-        buffer.reserveCapacity(26)
-
-        let lengthPrefixIndex = buffer.writerIndex
-        // Write a zero as a placeholder which will later be overwritten by the actual number of bytes written
-        buffer.writeInteger(.zero, as: UInt8.self)
-
-        let startWriterIndex = buffer.writerIndex
-
-        buffer = ipv6.makeDescription { (maxWriteableBytes, callback) in
-            buffer.writeWithUnsafeMutableBytes(minimumWritableBytes: maxWriteableBytes) {
-                $0.withMemoryRebound(to: UInt8.self) {
-                    callback($0)
-                }
-            }
-            return buffer
-        }
-
-        let endWriterIndex = buffer.writerIndex
-        let bytesWritten = endWriterIndex - startWriterIndex
-
-        /// This is safe to unwrap. The implementation above cannot more bytes than a UInt8 can represent.
-        let lengthPrefix = UInt8(exactly: bytesWritten).unsafelyUnwrapped
-
-        buffer.setInteger(
-            lengthPrefix,
-            at: lengthPrefixIndex,
-            as: UInt8.self
-        )
-
-        self.init(isFQDN: false, uncheckedData: buffer)
     }
 }
