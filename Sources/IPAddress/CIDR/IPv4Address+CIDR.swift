@@ -26,4 +26,13 @@ extension CIDR<IPv4Address> {
             prefixLength: 16
         )
     }
+
+    /// Representing 255.255.255.255/32
+    @inlinable
+    public static var broadcast: Self {
+        Self(
+            prefix: 0xFF_FF_FF_FF,
+            prefixLength: 32
+        )
+    }
 }

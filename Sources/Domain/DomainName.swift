@@ -85,20 +85,27 @@ public struct DomainName: Sendable {
     /// The number of labels in the domainName, excluding a leading wildcard label (`*`).
     @inlinable
     public var labelsCount: Int {
-        var containsWildcard = false
         var count = 0
         var iterator = self.makePositionIterator()
+
         /// FIXME: Check what to do if there are multiple *s in leading labels (*.*.*.example.com)
-        while let (startIndex, length) = iterator.next() {
-            if count == 0,
-                length == 1,
-                self._data.getInteger(at: startIndex, as: UInt8.self) == UInt8.asciiStar
-            {
-                containsWildcard = true
+        if let first = iterator.next() {
+            let isWildcard =
+                first.length == 1
+                && self._data.getInteger(
+                    at: first.startIndex,
+                    as: UInt8.self
+                ) == UInt8.asciiStar
+            if !isWildcard {
+                count += 1
             }
+        }
+
+        while iterator.next() != nil {
             count += 1
         }
-        return containsWildcard ? (count - 1) : count
+
+        return count
     }
 
     /// Whether the domainName is the DNS root domainName, aka `.`.
@@ -155,8 +162,25 @@ extension DomainName: Hashable {
     /// On the wire though, the root label is almost always present, so `isFQDN` is almost always `true`.
     /// So this method is useful to make sure a comparison of two `DomainName`s doesn't fail just because
     /// of the root-label indicator / FQN flag.
-    public func isEssentiallyEqual(to other: Self) -> Bool {
-        self._data == other._data
+    @inlinable
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs._data == rhs._data
+    }
+
+    /// Hash without considering the FQDN flag.
+    /// Users usually instantiate `DomainName` using a domain name which doesn't end in a dot.
+    /// That mean user-instantiate `DomainName`s usually have `isFQDN` set to `false`.
+    /// On the wire though, the root label is almost always present, so `isFQDN` is almost always `true`.
+    @inlinable
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(self._data)
+    }
+
+    /// For exact comparison which includes the FQDN flag.
+    @inlinable
+    public func isExactlyEqual(to other: Self) -> Bool {
+        self.isFQDN == other.isFQDN
+            && self._data == other._data
     }
 }
 
