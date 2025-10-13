@@ -1,4 +1,4 @@
-public import SwiftIDNA
+import SwiftIDNA
 
 public import struct NIOCore.ByteBuffer
 
@@ -140,11 +140,22 @@ public struct DomainName: Sendable {
         /// Make sure the domainName is valid
         /// No empty labels
         assert(self._data.readableBytes <= Self.maxLength)
-        assert(
-            self.allSatisfy({ !($0.readableBytes == 0 || $0.readableBytes > Self.maxLabelLength) })
-        )
-        assert(self._data.readableBytesView.allSatisfy(\.isASCII))
-        assert(self.allSatisfy { $0.readableBytesView.allSatisfy { !$0.isUppercasedASCIILetter } })
+        debugOnly {
+            for label in self {
+                let labelLength = label.readableBytes
+                precondition(
+                    labelLength > 0 && labelLength <= Self.maxLabelLength,
+                    "Label was longer than \(Self.maxLabelLength) bytes:\n\(label.hexDump(format: .detailed))"
+                )
+
+                for byte in label.readableBytesView {
+                    precondition(
+                        byte.isAcceptableDomainNameCharacter,
+                        "Label contained invalid byte: \(byte)\nLabel:\n\(label.hexDump(format: .detailed))"
+                    )
+                }
+            }
+        }
     }
 }
 

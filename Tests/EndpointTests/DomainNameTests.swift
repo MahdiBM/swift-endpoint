@@ -134,7 +134,6 @@ struct DomainNameTests {
         let weirdUnicodeLowercaseDomainASCII = try DomainName("xn--hello-pqa.co.uk")
         let weirdPartiallyUppercaseDomain = try DomainName("helloSS.co.uk")
         let weirdUppercaseDomain = try DomainName("HELLOSS.CO.UK.")
-        print(weirdUnicodeLowercaseDomain.debugDescription)
 
         /// The DomainName initializers turn non-ascii domain names to IDNA-encoded domain names.
         /// `ß` and `SS` are case-insensitively equal, so with no IDNA these 2 names would be equal.

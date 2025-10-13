@@ -1,6 +1,12 @@
 extension UInt8 {
+    /// Whether the byte is a valid character in a domain name.
+    ///
+    /// Only lowercased letter, digits, hyphen-minus, underscores, stars, and whitespaces are allowed in a domain name.
+    /// Underscores are allowed for service names like "_sip._tcp.example.com".
+    /// Stars are allowed for wildcards like "*.example.com".
+    /// Whitespaces are allowed for labels like "Mijia Cloud" which some Xiaomi devices use.
     @inlinable
-    var isLowercasedLetterOrDigitOrHyphenOrUnderscoreOrStarOrWhitespace: Bool {
+    public var isAcceptableDomainNameCharacter: Bool {
         self.isLowercasedLetter
             || self.isDigit
             || self == .asciiHyphenMinus

@@ -6,51 +6,41 @@ extension DomainName {
         /// 16 is the maximum number of bytes required to represent an IPv4 address here
         buffer.reserveCapacity(16)
 
-        let lengthPrefixIndex = buffer.writerIndex
-        // Write a zero as a placeholder which will later be overwritten by the actual number of bytes written
-        buffer.writeInteger(.zero, as: UInt8.self)
-
-        let startWriterIndex = buffer.writerIndex
-
         let bytes = ipv4.bytes
 
-        bytes.0.asDecimal(
-            writeUTF8Byte: {
-                buffer.writeInteger($0)
-            }
-        )
-        buffer.writeInteger(UInt8.asciiDot)
-
-        bytes.1.asDecimal(
-            writeUTF8Byte: {
-                buffer.writeInteger($0)
-            }
-        )
-        buffer.writeInteger(UInt8.asciiDot)
-
-        bytes.2.asDecimal(
-            writeUTF8Byte: {
-                buffer.writeInteger($0)
-            }
-        )
-        buffer.writeInteger(UInt8.asciiDot)
-
-        bytes.3.asDecimal(
-            writeUTF8Byte: {
-                buffer.writeInteger($0)
-            }
-        )
-
-        let endWriterIndex = buffer.writerIndex
-        let bytesWritten = endWriterIndex - startWriterIndex
-
-        /// This is safe to unwrap.
-        /// The implementation above cannot write more bytes than a UInt8 can represent.
-        let lengthPrefix = UInt8(exactly: bytesWritten).unsafelyUnwrapped
-
+        buffer.writeInteger(.zero, as: UInt8.self)
+        var segmentStartIndex = buffer.writerIndex
+        bytes.0.asDecimal(writeUTF8Byte: { buffer.writeInteger($0) })
         buffer.setInteger(
-            lengthPrefix,
-            at: lengthPrefixIndex,
+            UInt8(truncatingIfNeeded: buffer.writerIndex &- segmentStartIndex),
+            at: segmentStartIndex &- 1,
+            as: UInt8.self
+        )
+
+        buffer.writeInteger(.zero, as: UInt8.self)
+        segmentStartIndex = buffer.writerIndex
+        bytes.1.asDecimal(writeUTF8Byte: { buffer.writeInteger($0) })
+        buffer.setInteger(
+            UInt8(truncatingIfNeeded: buffer.writerIndex &- segmentStartIndex),
+            at: segmentStartIndex &- 1,
+            as: UInt8.self
+        )
+
+        buffer.writeInteger(.zero, as: UInt8.self)
+        segmentStartIndex = buffer.writerIndex
+        bytes.2.asDecimal(writeUTF8Byte: { buffer.writeInteger($0) })
+        buffer.setInteger(
+            UInt8(truncatingIfNeeded: buffer.writerIndex &- segmentStartIndex),
+            at: segmentStartIndex &- 1,
+            as: UInt8.self
+        )
+
+        buffer.writeInteger(.zero, as: UInt8.self)
+        segmentStartIndex = buffer.writerIndex
+        bytes.3.asDecimal(writeUTF8Byte: { buffer.writeInteger($0) })
+        buffer.setInteger(
+            UInt8(truncatingIfNeeded: buffer.writerIndex &- segmentStartIndex),
+            at: segmentStartIndex &- 1,
             as: UInt8.self
         )
 

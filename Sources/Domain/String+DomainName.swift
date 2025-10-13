@@ -370,7 +370,7 @@ extension DomainName {
             let byte = chunk[unchecked: idx]
             assert(!byte.isUppercasedASCIILetter)
 
-            if !byte.isLowercasedLetterOrDigitOrHyphenOrUnderscoreOrStarOrWhitespace {
+            if !byte.isAcceptableDomainNameCharacter {
                 throw ValidationError.labelContainsInvalidASCIIByte(
                     byte,
                     in: ByteBuffer(swiftEndpointReadingFromSpan: chunk)
