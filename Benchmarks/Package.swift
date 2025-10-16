@@ -119,7 +119,7 @@ package.targets += [
             "Domain",
         ],
         path: "DomainName",
-        swiftSettings: settings,
+        swiftSettings: benchmarkSettings,
         plugins: [
             .plugin(name: "BenchmarkPlugin", package: "package-benchmark")
         ]
@@ -131,9 +131,15 @@ package.targets += [
             .product(name: "Benchmark", package: "package-benchmark"),
         ],
         path: "IPAddress",
-        swiftSettings: settings,
+        swiftSettings: benchmarkSettings,
         plugins: [
             .plugin(name: "BenchmarkPlugin", package: "package-benchmark")
         ]
     ),
 ]
+
+var benchmarkSettings: [SwiftSetting] {
+    settings + [
+        .unsafeFlags(["-cross-module-optimization"], .when(configuration: .release))
+    ]
+}
