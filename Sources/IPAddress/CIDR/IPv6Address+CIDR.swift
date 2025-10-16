@@ -27,6 +27,7 @@ extension CIDR<IPv6Address> {
         )
     }
 
+    /// Representing ::FFFF:0:0/96 (aka ::FFFF:0.0.0.0/96)
     @inlinable
     public static var ipv4Mapped: Self {
         Self(

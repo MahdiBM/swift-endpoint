@@ -6,7 +6,7 @@ import struct NIOCore.ByteBuffer
 @available(swiftEndpointApplePlatforms 15, *)
 extension DomainName {
     /// Initialize an `DomainName` from a `AnyIPAddress`.
-    /// The ip address must be a valid IPv4 address.
+    /// The ip address must be a valid IPv4 address or an IPv4-mapped IPv6 address.
     /// IPv6 addresses are incompatible with domain names and will return `nil` unless they can be translated to an IPv4 address.
     /// For example an ip address like `.v4(127.0.0.1)` will turn into the domain name `"127.0.0.1"`.
     public init?(ip: AnyIPAddress) {
